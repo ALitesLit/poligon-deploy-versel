@@ -9,6 +9,8 @@ import RangeInput from "../../util/range.input";
 import { CirclePolygon } from "./circle.polygon";
 import { handleGetCenter } from "../../util/service";
 
+import { editPoligon, getPoligons } from "../../service/service";
+
 export const CreatePolygon = () => {
   const [loading, setLoading] = useState(true);
   const [positions, setPositions] = useState([[]]);
@@ -23,6 +25,7 @@ export const CreatePolygon = () => {
 
   const navigate = useNavigate();
   const { id, type } = useParams();
+
   const showModal = (e) => {
     e.stopPropagation();
     setIsModalOpen(true);
@@ -45,7 +48,7 @@ export const CreatePolygon = () => {
     return centroid;
   };
 
-  const handleOk = (e) => {
+  const handleOk = async (e) => {
     e.stopPropagation();
     if (!polygonName) return alert("Please enter a name for the polygon!");
     const oldPositions = JSON.parse(localStorage.getItem("polygons")) || [];
@@ -71,11 +74,33 @@ export const CreatePolygon = () => {
         color,
       });
     }
-    localStorage.setItem("polygons", JSON.stringify(newPositions));
-    alert("Polygons saved successfully!");
-    setIsModalOpen(false);
-    handleGetCenter(mapRef);
-    navigate("/");
+
+    try {
+      const cords = []; // Этот список будет содержать нужный беку формат. Он и будет оправлен на бек
+
+      // Здесь список переводится в нужный для бека формат
+      for (var i = 0; i < positions[0].length; i++) {
+        cords.push([positions[0][i].lat, positions[0][i].lng]);
+      }
+
+      // Отправка данных на бек
+      const { data } = await editPoligon(id, polygonName, cords);
+      
+      // Если с бека пришла ошибка то здесь она будет обрабатываться
+      if (data.status !== "success") {
+        throw `Error`;
+      }
+
+      localStorage.setItem("polygons", JSON.stringify(newPositions));
+      alert("Polygons saved successfully!");
+      setIsModalOpen(false);
+      handleGetCenter(mapRef);
+
+      // Если всё успешно пользователь отправится на главную
+      navigate("/");
+    } catch (err) {
+      alert(err);
+    }
   };
 
   const handleCancel = (e) => {
@@ -185,7 +210,9 @@ export const CreatePolygon = () => {
               </Button>
             </>
           )}
-          {(positions?.[0]?.length > 3 || center) && (
+          
+          {/* Если точек меньше 3 или они не сомкнутнуты то кнопка просто не появится */}
+          {((positions?.[0]?.length > 3) && (positions?.[0][0] == positions?.[0][positions[0].length - 1]) || center) && (
             <Button type="default" onClick={showModal} className="save-polygon">
               Save Polygon
             </Button>
