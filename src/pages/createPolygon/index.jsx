@@ -212,7 +212,7 @@ export const CreatePolygon = () => {
           )}
           
           {/* Если точек меньше 3 или они не сомкнутнуты то кнопка просто не появится */}
-          {((positions?.[0]?.length > 3) && (positions?.[0][0] == positions?.[0][positions[0].length - 1]) || center) && (
+          {((positions?.[0]?.length > 3) && ((positions?.[0][0] == positions?.[0][positions[0].length - 1]) || id != "new")) && (
             <Button type="default" onClick={showModal} className="save-polygon">
               Save Polygon
             </Button>
