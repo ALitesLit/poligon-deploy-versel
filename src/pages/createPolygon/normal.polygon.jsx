@@ -124,6 +124,8 @@ export const NormalPolygon = ({
     const dy = y - yy;
     return Math.sqrt(dx * dx + dy * dy);
   };
+  
+
   return (
     <>
       <MapClickHandler />

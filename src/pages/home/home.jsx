@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "./app.css";
 import {
   MapContainer,
@@ -20,6 +20,8 @@ import { filterPointsInPolygon, filterPointsWithCircle } from "./featcher";
 import { CirclePolygon } from "../createPolygon/circle.polygon";
 import RangeInput from "../../util/range.input";
 import { handleGetCenter } from "../../util/service";
+
+import { getPoligons } from "../../service/service";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -49,6 +51,13 @@ function App() {
       },
     };
   });
+
+  useEffect(
+    () => {
+      getPoligons();
+    }, [ localStorage ]
+  )
+
 
   const fetchPolygons = () => {
     const polygons = JSON.parse(localStorage.getItem("polygons")) || [];
@@ -104,13 +113,14 @@ function App() {
     }
   };
 
+
   const getPolygons = () => {
     return polygons.map((polygon, index) => {
       return {
         key: index,
-        label: polygon.name,
+        label: polygon?.name,
         onClick: () => {
-          navigate(`/polygon/${index}/${polygon?.type || "polygon"}`);
+          navigate(`/polygon/${polygon?.id}/${polygon?.type || "polygon"}`);
           setOpen(false);
           localStorage.setItem(
             "userLocation",
@@ -120,6 +130,8 @@ function App() {
       };
     });
   };
+
+
   const closeFilter = () => {
     setOpenFilter(!openFilter);
     setPositions([[]]);
@@ -142,11 +154,13 @@ function App() {
     handleGetCenter(mapRef);
   };
 
+
   const result = openFilter
     ? filterType === "polygon"
       ? filterPointsInPolygon(polygons, positions)
       : filterPointsWithCircle(polygons, center, radius)
     : [];
+    
 
   const getPolygonPoints = () => {
     let points = [];
@@ -166,6 +180,8 @@ function App() {
     setOpenedPolygons(points);
     setOpenedCircle(circle);
   };
+
+
   return (
     loading === false && (
       <>
@@ -295,6 +311,7 @@ function App() {
                     </p>
                     <details style={{ width: "100%" }}>
                       <summary>polygon coordinates</summary>
+
                       {polygon.type !== "circle" ? (
                         polygon?.positions?.map((position, positionIndex) => (
                           <div key={positionIndex}>

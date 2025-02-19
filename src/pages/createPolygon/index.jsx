@@ -9,7 +9,7 @@ import RangeInput from "../../util/range.input";
 import { CirclePolygon } from "./circle.polygon";
 import { handleGetCenter } from "../../util/service";
 
-import { editPoligon, getPoligons } from "../../service/service";
+import { deletePoligon, editPoligon, getPoligons } from "../../service/service";
 
 export const CreatePolygon = () => {
   const [loading, setLoading] = useState(true);
@@ -50,9 +50,12 @@ export const CreatePolygon = () => {
 
   const handleOk = async (e) => {
     e.stopPropagation();
+
     if (!polygonName) return alert("Please enter a name for the polygon!");
+
     const oldPositions = JSON.parse(localStorage.getItem("polygons")) || [];
     let newPositions = [...oldPositions];
+
     if (id != "new") {
       newPositions[id] = {
         ...newPositions[id],
@@ -65,6 +68,7 @@ export const CreatePolygon = () => {
     } else {
       const color = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
       newPositions.push({
+        id: id,
         name: polygonName,
         positions: positions[0],
         center:
@@ -83,8 +87,11 @@ export const CreatePolygon = () => {
         cords.push([positions[0][i].lat, positions[0][i].lng]);
       }
 
+      // Центр полигона
+      const center = type === "circle" ? center : calculatePolygonCentroid(positions[0]);
+
       // Отправка данных на бек
-      const { data } = await editPoligon(id, polygonName, cords);
+      const { data } = await editPoligon(id, polygonName, cords, center, radius);
       
       // Если с бека пришла ошибка то здесь она будет обрабатываться
       if (data.status !== "success") {
@@ -111,9 +118,11 @@ export const CreatePolygon = () => {
   const getPolygon = (id) => {
     if (id != "new") {
       const polygons = JSON.parse(localStorage.getItem("polygons")) || [];
-      const polygon = polygons[id];
+      const polygon = polygons.filter((i) => i.id == id)[0];
+      
       if (polygon) {
         setPolygonName(polygon.name);
+
         if (type === "circle") {
           setCenter(polygon.center);
           setRadius(polygon.radius);
@@ -131,9 +140,11 @@ export const CreatePolygon = () => {
   useEffect(() => {
     setLoading(true);
     setUserLocation(JSON.parse(localStorage.getItem("userLocation")));
+    
     setTimeout(() => {
       setLoading(false);
     }, 10);
+
     getPolygon(id);
   }, [id]);
 
@@ -141,20 +152,43 @@ export const CreatePolygon = () => {
     return <div>Loading map...</div>;
   }
 
+
   const savePolygons = (e) => {
     setPolygonName(e.target.value);
   };
 
-  const deletePolygon = () => {
-    if (id != "new") {
-      const polygons = JSON.parse(localStorage.getItem("polygons")) || [];
-      polygons.splice(id, 1);
-      localStorage.setItem("polygons", JSON.stringify(polygons));
-      alert("Polygon deleted successfully!");
-      setIsModalOpen(false);
-      navigate("/");
+
+  const deletePolygon = async () => {
+    const cords = []; // Этот список будет содержать нужный беку формат. Он и будет оправлен на бек
+
+    // Здесь список переводится в нужный для бека формат
+    for (var i = 0; i < positions[0].length; i++) {
+      cords.push([positions[0][i].lat, positions[0][i].lng]);
     }
-    handleGetCenter(mapRef);
+
+
+    try {
+      if (id != "new") {
+        const polygons = JSON.parse(localStorage.getItem("polygons")) || [];
+        polygons.splice(id, 1);
+  
+        const { data } = await deletePoligon(id);
+  
+        // Если с бека пришла ошибка то здесь она будет обрабатываться
+        if (data.status !== "success") {
+          throw `Error`;
+        }
+  
+        localStorage.setItem("polygons", JSON.stringify(polygons));
+        alert("Polygon deleted successfully!");
+        setIsModalOpen(false);
+        navigate("/");
+      }
+  
+      handleGetCenter(mapRef);
+    } catch (err) {
+      alert(err);
+    }
   };
 
   return (
@@ -171,7 +205,6 @@ export const CreatePolygon = () => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
         {type === "polygon" ? (
           <NormalPolygon
             positions={positions}
