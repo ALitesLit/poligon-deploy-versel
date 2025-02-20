@@ -41,6 +41,8 @@ function App() {
   const navigate = useNavigate();
   const mapRef = useRef();
 
+  const [ listPolygons, setListPolygons ] = useState([]);
+
   const polygonTypes = ["polygon", "circle"].map((type) => {
     return {
       key: type,
@@ -52,11 +54,31 @@ function App() {
     };
   });
 
+
+  const getPolygons = () => {
+    return polygons.map((polygon, index) => {
+      return {
+        key: index,
+        label: polygon?.name,
+        onClick: () => {
+          navigate(`/polygon/${polygon?.id}/${polygon?.type || "polygon"}`);
+          setOpen(false);
+          localStorage.setItem(
+            "userLocation",
+            JSON.stringify([polygon?.center?.lat, polygon?.center?.lng])
+          );
+        },
+      };
+    });
+  };
+
+
   useEffect(
     () => {
       getPoligons();
-    }, [ localStorage ]
-  )
+      setListPolygons(getPolygons());
+    }, [ localStorage.getItem("polygons"), polygons ]
+  );
 
 
   const fetchPolygons = () => {
@@ -67,6 +89,7 @@ function App() {
   useEffect(() => {
     setLoading(true);
     fetchPolygons();
+
     const u_l = localStorage.getItem("userLocation");
     if (u_l) {
       setUserLocation(JSON.parse(u_l));
@@ -95,6 +118,14 @@ function App() {
     }
   }, []);
 
+  
+  useEffect(
+    () => {
+      fetchPolygons();
+    }, [ localStorage.getItem("polygons") ]
+  );
+
+
   if (loading) {
     return <div>Loading map...</div>;
   }
@@ -111,24 +142,6 @@ function App() {
       setOpen1(nextOpen);
       handleGetCenter(mapRef);
     }
-  };
-
-
-  const getPolygons = () => {
-    return polygons.map((polygon, index) => {
-      return {
-        key: index,
-        label: polygon?.name,
-        onClick: () => {
-          navigate(`/polygon/${polygon?.id}/${polygon?.type || "polygon"}`);
-          setOpen(false);
-          localStorage.setItem(
-            "userLocation",
-            JSON.stringify([polygon?.center?.lat, polygon?.center?.lng])
-          );
-        },
-      };
-    });
   };
 
 
@@ -341,7 +354,7 @@ function App() {
 
           <Space className="button-group" direction="horizontal">
             <Dropdown
-              menu={{ items: getPolygons() }}
+              menu={{ items: listPolygons }}
               placement="bottomRight"
               trigger={["click"]}
               onOpenChange={handleOpenChange}
