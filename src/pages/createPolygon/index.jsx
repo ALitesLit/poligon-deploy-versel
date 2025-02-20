@@ -47,10 +47,8 @@ export const CreatePolygon = () => {
     };
     return centroid;
   };
-
-  useEffect(
-    () => console.log(positions[0]), [positions]
-  )
+  
+  
   const handleOk = async (e) => {
     e.stopPropagation();
 
